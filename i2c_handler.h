@@ -11,7 +11,13 @@
 #define I2C_HANDLER_H_
 
 #include "em_i2c.h"
+#define MMA8653FC_SDA_PORT      gpioPortA
+#define MMA8653FC_SDA_PIN       3
+#define MMA8653FC_SCL_PORT      gpioPortA
+#define MMA8653FC_SCL_PIN       2
 
+#define MMA8653FC_SCL_LOC       I2C_ROUTELOC0_SCLLOC_LOC1 // PA2
+#define MMA8653FC_SDA_LOC       I2C_ROUTELOC0_SDALOC_LOC3 // PA3
 // Public functions
 void i2c_init(void);
 void i2c_enable(void);

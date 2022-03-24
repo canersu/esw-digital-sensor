@@ -20,6 +20,7 @@ typedef struct
 
 // Public functions
 void sensor_reset (void);
+uint8_t read_whoami();
 void set_sensor_active ();
 void set_sensor_standby ();
 int8_t configure_xyz_data (uint8_t dataRate, uint8_t range, uint8_t powerMod);

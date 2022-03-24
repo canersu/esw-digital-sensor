@@ -25,13 +25,23 @@
  */
 void i2c_init (void)
 {
-    // TODO Enable I2C clock.
 
-    // TODO Initialize and configure SDA and SCL pins for I2C data transfer.
-	
-	// TODO Route I2C SDA and SCL to GPIO pins (efr32mg12-datasheet page 188).
+    static I2C_Init_TypeDef init = I2C_INIT_DEFAULT;
     
-    // TODO Initialize I2C. 
+    // Enable I2C clock.
+    CMU_ClockEnable(cmuClock_I2C0, true);
+
+    // Initialize and configure SDA and SCL pins for I2C data transfer.
+    gpio_i2c_pin_init();
+	
+	// Route I2C SDA and SCL to GPIO pins (efr32mg12-datasheet page 188).
+	I2C0->ROUTELOC0 = MMA8653FC_SCL_LOC | MMA8653FC_SDA_LOC;
+    I2C0->ROUTEPEN = I2C_ROUTEPEN_SDAPEN | I2C_ROUTEPEN_SCLPEN;
+    
+    // Initialize I2C. 
+    init.freq = I2C_FREQ_FAST_MAX;
+    init.enable = false;
+    I2C_Init(I2C0, &init);
 }
 
 void i2c_enable (void)
@@ -51,7 +61,15 @@ void i2c_reset (void)
 
 I2C_TransferSeq_TypeDef * i2c_transaction (I2C_TransferSeq_TypeDef * seq)
 {
-    // TODO Do a polled transfer.
+    I2C_TransferReturn_TypeDef ret;
+    
+    // Do a polled transfer.
+    ret = I2C_TransferInit(I2C0, seq);
+    
+    while (i2cTransferInProgress == ret)
+    {
+        ret = I2C_Transfer(I2C0);
+    }
     return seq;
 }
 

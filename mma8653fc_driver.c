@@ -304,8 +304,15 @@ float convert_to_g(uint16_t raw_val, uint8_t sensor_scale)
 {
     float res;
     // TODO Convert raw sensor data to g-force acceleration value
+    uint8_t reg;
+    reg = read_registry(MMA8653FC_REGADDR_XYZ_DATA_CFG);
+    reg = (reg & ~MMA8653FC_XYZ_DATA_CFG_RANGE_MASK);
+
     res = convert_to_count(raw_val);
-    res /= (512*sensor_scale);
+
+    if(reg == MMA8653FC_XYZ_DATA_CFG_2G_RANGE){res /= 256;}
+    if(reg == MMA8653FC_XYZ_DATA_CFG_4G_RANGE){res /= 128;}
+    if(reg == MMA8653FC_XYZ_DATA_CFG_8G_RANGE){res /= 64;}
     
     return res;
 }

@@ -100,49 +100,52 @@ static void mma_data_ready_loop (void *args)
     uint8_t res;
     static uint16_t buf_index = 0;
     float enX, enY, enZ;
-    // TODO Initialize and enable I2C.
+    // Initialize and enable I2C.
     i2c_init();
     i2c_enable();
 
-    // TODO Read Who-am-I registry
+    // Read Who-am-I registry
     res = read_whoami();
     info1("Who-am-I %u %x", res, res);
 
-    // TODO To configure sensor put sensor in standby mode.
+    // To configure sensor put sensor in standby mode.
     set_sensor_standby();
     
-    // TODO Configure sensor for xyz data acquisition.
+    // Configure sensor for xyz data acquisition.
     res = configure_xyz_data(MMA8653FC_CTRL_REG1_DR_6HZ, SENSOR_DATA_RANGE, MMA8653FC_CTRL_REG2_POWMOD_LOWPOW);
     if(res != 0)debug1("Sensor conf failed");
     
-    // TODO Configure sensor to generate interrupt when new data becomes ready.
+    // Configure sensor to generate interrupt when new data becomes ready.
     res = configure_interrupt(INTERRUPT_POLARITY, INTERRUPT_PINMODE, INTERRUPT_DATA_READY, INTERRUPT_SELECTION);
     if(res != 0)debug1("Interrupt conf failed");
     
-    // TODO Configure GPIO for external interrupts and enable external interrupts.
+    // Configure GPIO for external interrupts and enable external interrupts.
     gpio_external_interrupt_enable(dataReadyThreadId, DATA_READY_FLAG);
     
-    // TODO Activate sensor.
+    // Activate sensor.
     set_sensor_active();
     
     for (;;)
     {
-        // TODO Wait for data ready interrupt signal from MMA8653FC sensor
+        // Wait for data ready interrupt signal from MMA8653FC sensor
         osDelay(150*osKernelGetTickFreq()/1000);
+        // Get raw data
         rawData = get_xyz_data();
         // info1("Status %02x, X: %04x Y: %04x Z: %04x", rawData.status, rawData.out_x, rawData.out_y, rawData.out_z);
         if(rawData.status == 15)
         {
             if(buf_index < ACC_XYZ_DATA_LEN)
             {
-                buf1_x[buf_index] = convert_to_count(rawData.out_x);
-                buf1_y[buf_index] = convert_to_count(rawData.out_y);
-                buf1_z[buf_index] = convert_to_count(rawData.out_z);
+                // Convert to engineering value
+                buf1_x[buf_index] = convert_to_g(rawData.out_x, SENSOR_DATA_RANGE);
+                buf1_y[buf_index] = convert_to_g(rawData.out_y, SENSOR_DATA_RANGE);
+                buf1_z[buf_index] = convert_to_g(rawData.out_z, SENSOR_DATA_RANGE);
                 buf_index++;
                 info1("Idx: %d X: %f Y: %f Z: %f", buf_index, buf1_x[buf_index] , buf1_y[buf_index], buf1_z[buf_index]);
             }
             else
             {
+                // Signal analysis
                 enX = calc_signal_energy(buf1_x, buf_index);
                 enY = calc_signal_energy(buf1_y, buf_index);
                 enZ = calc_signal_energy(buf1_z, buf_index);
@@ -153,13 +156,6 @@ static void mma_data_ready_loop (void *args)
                 info2("z %i, %i", (int32_t)enZ, abs((int32_t)(enZ*1000) - (((int32_t)enZ)*1000)));
             }
         }
-
-        // TODO Get raw data
-        
-        // TODO Convert to engineering value
-        
-        // TODO Signal analysis
-
     }
 }
 

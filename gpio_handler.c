@@ -31,9 +31,13 @@ volatile static uint32_t resumeThreadFlagID;
  */
 void gpio_i2c_pin_init (void)
 {
-    // TODO Enable GPIO peripheral
 
-    // TODO Take control of SDC and SCL output pins.
+    // Enable GPIO peripheral
+    CMU_ClockEnable(cmuClock_GPIO, true);
+
+    // Take control of SDC and SCL output pins.
+	GPIO_PinModeSet(MMA8653FC_SCL_PORT, MMA8653FC_SCL_PIN, gpioModeWiredAndPullUpFilter, 1);
+	GPIO_PinModeSet(MMA8653FC_SDA_PORT, MMA8653FC_SDA_PIN, gpioModeWiredAndPullUpFilter, 1);
 }
 
 /**
@@ -44,10 +48,15 @@ void gpio_i2c_pin_init (void)
 void gpio_external_interrupt_init (void)
 {
     // TODO Enable GPIO peripheral
+    CMU_ClockEnable(cmuClock_GPIO, true);
 
     // TODO Configure pin
+    GPIO_PinModeSet(MMA8653FC_INT_PORT, MMA8653FC_INT_PIN, gpioModeInputPullFilter, 1);
     
     // TODO Configure external interrupts
+    GPIO_IntDisable(GPIO_IF_EXTI_NUM);
+    GPIO_ExtIntConfig(MMA8653FC_INT_PORT, MMA8653FC_INT_PIN, GPIO_EXTI_NUM, false, true, false); // Port, pin, EXTI number, rising edge, falling edge, disabled.
+    GPIO_InputSenseSet(GPIO_INSENSE_INT, GPIO_INSENSE_INT);
 
 }
 
@@ -86,5 +95,15 @@ void gpio_external_interrupt_enable (osThreadId_t tID, uint32_t tFlag)
 void GPIO_ODD_IRQHandler (void)
 {
     // TODO Get pending interrupts
+    uint32_t pending = GPIO_IntGetEnabled();
+
+    // Check if button interrupt is enabled
+    if (pending & GPIO_IF_EXTI_NUM)
+    {
+        GPIO_IntClear(GPIO_IF_EXTI_NUM);
+        osThreadFlagsSet(resumeThreadID, resumeThreadFlagID);
+    }
+    else; // This was not a button interrupt.
     // TODO Clear interrupt
+    GPIO_IntClear(GPIO_IF_EXTI_NUM);
 }

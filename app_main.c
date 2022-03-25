@@ -64,7 +64,19 @@
 #include "incbin.h"
 INCBIN(Header, "header.bin");
 
+#define DATA_READY_FLAG     0x00000001U
 static osThreadId_t dataReadyThreadId;
+
+#ifdef CONVERT_TO_G
+    static float buf1_x[ACC_XYZ_DATA_LEN];
+    static float buf1_y[ACC_XYZ_DATA_LEN];
+    static float buf1_z[ACC_XYZ_DATA_LEN];
+#else
+    static int16_t buf1_x[ACC_XYZ_DATA_LEN];
+    static int16_t buf1_y[ACC_XYZ_DATA_LEN];
+    static int16_t buf1_z[ACC_XYZ_DATA_LEN];
+#endif
+
 
 float calc_signal_energy(float buf[], uint32_t num_elements);
 
@@ -84,23 +96,41 @@ static void hb_loop (void *args)
  */
 static void mma_data_ready_loop (void *args)
 {
+    xyz_rawdata_t rawData;
+    uint8_t res;
+    static uint16_t buf_index = 0;
+    float enX, enY, enZ;
     // TODO Initialize and enable I2C.
+    i2c_init();
+    i2c_enable();
 
     // TODO Read Who-am-I registry
-    
+    res = read_whoami();
+    info1("Who-am-I %u %x", res, res);
+
     // TODO To configure sensor put sensor in standby mode.
+    set_sensor_standby();
     
     // TODO Configure sensor for xyz data acquisition.
+    res = configure_xyz_data(MMA8653FC_CTRL_REG1_DR_6HZ, SENSOR_DATA_RANGE, MMA8653FC_CTRL_REG2_POWMOD_LOWPOW);
+    if(res != 0)debug1("Sensor conf failed");
     
     // TODO Configure sensor to generate interrupt when new data becomes ready.
+    set_sensor_standby();
+    res = configure_interrupt(INTERRUPT_POLARITY, INTERRUPT_PINMODE, INTERRUPT_DATA_READY, INTERRUPT_SELECTION);
+    if(res != 0)debug1("Interrupt conf failed");
     
     // TODO Configure GPIO for external interrupts and enable external interrupts.
     
     // TODO Activate sensor.
+    set_sensor_active();
     
     for (;;)
     {
         // TODO Wait for data ready interrupt signal from MMA8653FC sensor
+        osDelay(150*osKernelGetTickFreq()/1000);
+        rawData = get_xyz_data();
+        info1("Status %02x, X: %04x Y: %04x Z: %04x", rawData.status, rawData.out_x, rawData.out_y, rawData.out_z);
 
         // TODO Get raw data
         

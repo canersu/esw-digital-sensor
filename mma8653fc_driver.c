@@ -85,13 +85,25 @@ void set_sensor_standby ()
  */
 int8_t configure_xyz_data (uint8_t dataRate, uint8_t range, uint8_t powerMod)
 {
-    // TODO Check if sensor is in standby mode, control registers can only be modified in standby mode.
+    // Check if sensor is in standby mode, control registers can only be modified in standby mode.
+    uint8_t regVal, pow_regVal, cfg_regVal, dr_regVal;
+    regVal = read_registry(MMA8653FC_REGADDR_SYSMOD);
+    if (regVal != MMA8653FC_SYSMOD_MOD_STANDBY){return -1;}
     
-    // TODO Set data rate.
+    // Set data rate.
+    dr_regVal = read_registry(MMA8653FC_REGADDR_CTRL_REG1);
+    dr_regVal = (dr_regVal & ~MMA8653FC_CTRL_REG1_DATA_RATE_MASK) | (dataRate << MMA8653FC_CTRL_REG1_DATA_RATE_SHIFT);
+    write_registry(MMA8653FC_REGADDR_CTRL_REG1, dr_regVal);
     
-    // TODO Set dynamic range.
+    // Set dynamic range.
+    cfg_regVal = read_registry(MMA8653FC_REGADDR_XYZ_DATA_CFG);
+    cfg_regVal = (cfg_regVal & ~MMA8653FC_XYZ_DATA_CFG_RANGE_MASK) | (range << MMA8653FC_XYZ_DATA_CFG_RANGE_SHIFT);
+    write_registry(MMA8653FC_REGADDR_XYZ_DATA_CFG, cfg_regVal);
     
-    // TODO Set power mode (oversampling). 
+    // Set power mode (oversampling).
+    pow_regVal = read_registry(MMA8653FC_REGADDR_CTRL_REG2);
+    pow_regVal = (pow_regVal & ~MMA8653FC_CTRL_REG2_ACTIVEPOW_MASK) | (powerMod << MMA8653FC_CTRL_REG2_ACTIVEPOW_SHIFT);
+    write_registry(MMA8653FC_REGADDR_CTRL_REG2, pow_regVal);
     
     return 0;
 }
@@ -110,12 +122,26 @@ int8_t configure_xyz_data (uint8_t dataRate, uint8_t range, uint8_t powerMod)
 int8_t configure_interrupt (uint8_t polarity, uint8_t pinmode, uint8_t interrupt, uint8_t int_select)
 {
     // TODO Check if sensor is in standby mode, control registers can only be modified in standby mode.
+    uint8_t regVal, pol_regVal, dr_regVal, is_regVal;
+    regVal = read_registry(MMA8653FC_REGADDR_SYSMOD);
+    if (regVal != MMA8653FC_SYSMOD_MOD_STANDBY){return -1;}
     
     // TODO Configure interrupt pin pinmode and interrupt transition direction
+    pol_regVal = read_registry(MMA8653FC_REGADDR_CTRL_REG3);
+    pol_regVal = (pol_regVal & ~MMA8653FC_CTRL_REG3_POLARITY_MASK) | (polarity << MMA8653FC_CTRL_REG3_POLARITY_SHIFT);
+    pol_regVal = (pol_regVal & ~MMA8653FC_CTRL_REG3_PINMODE_MASK) | (pinmode << MMA8653FC_CTRL_REG3_PINMODE_SHIFT);
+    write_registry(MMA8653FC_REGADDR_CTRL_REG3, pol_regVal);
 
     // TODO Enable data ready interrupt
+    dr_regVal = read_registry(MMA8653FC_REGADDR_CTRL_REG4);
+    dr_regVal = (dr_regVal & ~MMA8653FC_CTRL_REG4_DRDY_INT_MASK) | (interrupt << MMA8653FC_CTRL_REG4_DRDY_INT_SHIFT);
+    write_registry(MMA8653FC_REGADDR_CTRL_REG4, dr_regVal);
+
 
     // TODO Route data ready interrupt to sensor INT1 output pin (connected to port PA1 on the TTTW uC)
+    is_regVal = read_registry(MMA8653FC_REGADDR_CTRL_REG5);
+    is_regVal = (is_regVal & ~MMA8653FC_CTRL_REG5_DRDY_INTSEL_MASK) | (int_select << MMA8653FC_CTRL_REG5_DRDY_INTSEL_SHIFT);
+    write_registry(MMA8653FC_REGADDR_CTRL_REG5, is_regVal);
 
     return 0;
 }
@@ -127,11 +153,34 @@ int8_t configure_interrupt (uint8_t polarity, uint8_t pinmode, uint8_t interrupt
  */
 xyz_rawdata_t get_xyz_data()
 {
+    uint8_t rx_buf[7];
+    uint8_t reg_val_msb, reg_val_lsb;
     xyz_rawdata_t data;
-    // TODO Read multiple registries for status and x, y, z raw data
+    
+    reg_val_msb = read_registry(MMA8653FC_REGADDR_STATUS);
+    data.status = reg_val_msb;
+    
+    // Shift result MSB and LSB bytes into 16-bit unsigned data type
+    reg_val_msb = read_registry(MMA8653FC_REGADDR_OUT_X_MSB);
+    reg_val_lsb = read_registry(MMA8653FC_REGADDR_OUT_X_LSB);
+    data.out_x = reg_val_msb << 8 | (0x0000 | reg_val_lsb);
+    
+    reg_val_msb = read_registry(MMA8653FC_REGADDR_OUT_Y_MSB);
+    reg_val_lsb = read_registry(MMA8653FC_REGADDR_OUT_Y_LSB);
+    data.out_y = reg_val_msb << 8 | (0x0000 | reg_val_lsb);
+    
+    reg_val_msb = read_registry(MMA8653FC_REGADDR_OUT_Z_MSB);
+    reg_val_lsb = read_registry(MMA8653FC_REGADDR_OUT_Z_LSB);
+    data.out_z = reg_val_msb << 8 | (0x0000 | reg_val_lsb);
+    // read_multiple_registries(MMA8653FC_REGADDR_STATUS, rx_buf, 7);
+    // data.status = rx_buf[0];
+    // data.out_x = (uint16_t)(rx_buf[1] << 8) | (0x0000 | rx_buf[2]);
+    // data.out_y = (uint16_t)(rx_buf[3] << 8) | (0x0000 | rx_buf[4]);
+    // data.out_z = (uint16_t)(rx_buf[5] << 8) | (0x0000 | rx_buf[6]);
     
     return data;
 }
+
 
 /**
  * @brief   Read value of one registry of MMA8653FC.
@@ -211,7 +260,28 @@ static void read_multiple_registries(uint8_t startRegAddr, uint8_t *rxBuf, uint1
     // TODO Configure I2C_TransferSeq_TypeDef 
     
     // TODO Do I2C transaction
+
+    // uint8_t reg;
+    I2C_TransferSeq_TypeDef *ret, seq;
+    uint8_t tx_buf[rxBufLen], rx_buf[rxBufLen];
     
+    // Configure I2C_TransferSeq_TypeDef
+    seq.addr = MMA8653FC_SLAVE_ADDRESS_READ;
+    tx_buf[0] = startRegAddr;
+    seq.buf[0].data = tx_buf;
+    seq.buf[0].len = rxBufLen;
+    
+    rx_buf[0] = 0;
+    seq.buf[1].data = rx_buf;
+    seq.buf[1].len = rxBufLen;
+    seq.flags = I2C_FLAG_WRITE_READ;    
+    
+    // Read a value from MMA8653FC registry
+    ret = i2c_transaction(&seq);
+    // if (ret == i2cTransferInProgress)
+    // reg = ret->buf[1].data[0];
+    rxBuf = ret->buf[1].data[0];
+
     return ;
 }
 

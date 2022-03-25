@@ -25,6 +25,7 @@ void set_sensor_active ();
 void set_sensor_standby ();
 int8_t configure_xyz_data (uint8_t dataRate, uint8_t range, uint8_t powerMod);
 int8_t configure_interrupt (uint8_t polarity, uint8_t pinmode, uint8_t interrupt, uint8_t int_select);
+static void read_multiple_registries(uint8_t startRegAddr, uint8_t *rxBuf, uint16_t rxBufLen);
 
 xyz_rawdata_t get_xyz_data();
 int16_t convert_to_count(uint16_t raw_val);

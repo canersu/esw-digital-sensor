@@ -154,29 +154,13 @@ int8_t configure_interrupt (uint8_t polarity, uint8_t pinmode, uint8_t interrupt
 xyz_rawdata_t get_xyz_data()
 {
     uint8_t rx_buf[7];
-    uint8_t reg_val_msb, reg_val_lsb;
     xyz_rawdata_t data;
-    
-    reg_val_msb = read_registry(MMA8653FC_REGADDR_STATUS);
-    data.status = reg_val_msb;
-    
-    // Shift result MSB and LSB bytes into 16-bit unsigned data type
-    reg_val_msb = read_registry(MMA8653FC_REGADDR_OUT_X_MSB);
-    reg_val_lsb = read_registry(MMA8653FC_REGADDR_OUT_X_LSB);
-    data.out_x = reg_val_msb << 8 | (0x0000 | reg_val_lsb);
-    
-    reg_val_msb = read_registry(MMA8653FC_REGADDR_OUT_Y_MSB);
-    reg_val_lsb = read_registry(MMA8653FC_REGADDR_OUT_Y_LSB);
-    data.out_y = reg_val_msb << 8 | (0x0000 | reg_val_lsb);
-    
-    reg_val_msb = read_registry(MMA8653FC_REGADDR_OUT_Z_MSB);
-    reg_val_lsb = read_registry(MMA8653FC_REGADDR_OUT_Z_LSB);
-    data.out_z = reg_val_msb << 8 | (0x0000 | reg_val_lsb);
-    // read_multiple_registries(MMA8653FC_REGADDR_STATUS, rx_buf, 7);
-    // data.status = rx_buf[0];
-    // data.out_x = (uint16_t)(rx_buf[1] << 8) | (0x0000 | rx_buf[2]);
-    // data.out_y = (uint16_t)(rx_buf[3] << 8) | (0x0000 | rx_buf[4]);
-    // data.out_z = (uint16_t)(rx_buf[5] << 8) | (0x0000 | rx_buf[6]);
+
+    read_multiple_registries(MMA8653FC_REGADDR_STATUS, rx_buf, 7);
+    data.status = rx_buf[0];
+    data.out_x = (uint16_t)(rx_buf[1] << 8) | (0x0000 | rx_buf[2]);
+    data.out_y = (uint16_t)(rx_buf[3] << 8) | (0x0000 | rx_buf[4]);
+    data.out_z = (uint16_t)(rx_buf[5] << 8) | (0x0000 | rx_buf[6]);
     
     return data;
 }
@@ -257,32 +241,14 @@ static void write_registry(uint8_t regAddr, uint8_t regVal)
  */
 static void read_multiple_registries(uint8_t startRegAddr, uint8_t *rxBuf, uint16_t rxBufLen)
 {
-    // TODO Configure I2C_TransferSeq_TypeDef 
-    
-    // TODO Do I2C transaction
-
-    // uint8_t reg;
-    I2C_TransferSeq_TypeDef *ret, seq;
-    uint8_t tx_buf[rxBufLen], rx_buf[rxBufLen];
-    
-    // Configure I2C_TransferSeq_TypeDef
-    seq.addr = MMA8653FC_SLAVE_ADDRESS_READ;
-    tx_buf[0] = startRegAddr;
-    seq.buf[0].data = tx_buf;
-    seq.buf[0].len = rxBufLen;
-    
-    rx_buf[0] = 0;
-    seq.buf[1].data = rx_buf;
-    seq.buf[1].len = rxBufLen;
-    seq.flags = I2C_FLAG_WRITE_READ;    
-    
-    // Read a value from MMA8653FC registry
-    ret = i2c_transaction(&seq);
-    // if (ret == i2cTransferInProgress)
-    // reg = ret->buf[1].data[0];
-    rxBuf = ret->buf[1].data[0];
-
-    return ;
+    uint8_t new_addr ,tmp, i;
+    tmp = startRegAddr;
+    for(i=0; i<rxBufLen; i++)
+    {
+        new_addr = read_registry(tmp);
+        rxBuf[i] = new_addr;
+        tmp+=1;
+    }
 }
 
 /**

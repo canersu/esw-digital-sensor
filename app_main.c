@@ -116,12 +116,11 @@ static void mma_data_ready_loop (void *args)
     if(res != 0)debug1("Sensor conf failed");
     
     // TODO Configure sensor to generate interrupt when new data becomes ready.
-    set_sensor_standby();
     res = configure_interrupt(INTERRUPT_POLARITY, INTERRUPT_PINMODE, INTERRUPT_DATA_READY, INTERRUPT_SELECTION);
     if(res != 0)debug1("Interrupt conf failed");
     
     // TODO Configure GPIO for external interrupts and enable external interrupts.
-    gpio_external_interrupt_enable();
+    gpio_external_interrupt_enable(dataReadyThreadId, DATA_READY_FLAG);
     
     // TODO Activate sensor.
     set_sensor_active();
@@ -134,9 +133,25 @@ static void mma_data_ready_loop (void *args)
         // info1("Status %02x, X: %04x Y: %04x Z: %04x", rawData.status, rawData.out_x, rawData.out_y, rawData.out_z);
         if(rawData.status == 15)
         {
-            buf1_x[buf_index] = convert_to_count(rawData.out_x);
-            buf1_y[buf_index] = convert_to_count(rawData.out_y);
-            buf1_z[buf_index] = convert_to_count(rawData.out_z);
+            if(buf_index < ACC_XYZ_DATA_LEN)
+            {
+                buf1_x[buf_index] = convert_to_count(rawData.out_x);
+                buf1_y[buf_index] = convert_to_count(rawData.out_y);
+                buf1_z[buf_index] = convert_to_count(rawData.out_z);
+                buf_index++;
+                info1("Idx: %d X: %f Y: %f Z: %f", buf_index, buf1_x[buf_index] , buf1_y[buf_index], buf1_z[buf_index]);
+            }
+            else
+            {
+                enX = calc_signal_energy(buf1_x, buf_index);
+                enY = calc_signal_energy(buf1_y, buf_index);
+                enZ = calc_signal_energy(buf1_z, buf_index);
+                buf_index = 0;
+                info2("Signal Energy");
+                info2("x %i, %i", (int32_t)enX, abs((int32_t)(enX*1000) - (((int32_t)enX)*1000)));
+                info2("y %i, %i", (int32_t)enY, abs((int32_t)(enY*1000) - (((int32_t)enY)*1000)));
+                info2("z %i, %i", (int32_t)enZ, abs((int32_t)(enZ*1000) - (((int32_t)enZ)*1000)));
+            }
         }
 
         // TODO Get raw data

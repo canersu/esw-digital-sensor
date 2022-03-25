@@ -296,8 +296,28 @@ static void read_multiple_registries(uint8_t startRegAddr, uint8_t *rxBuf, uint1
  */
 int16_t convert_to_count(uint16_t raw_val)
 {
-    uint16_t res;
+    signed int res;
     // TODO Convert raw sensor data to ADC readout (count) value
+	// signed int result = 0;
+	// Check sign bit.
+    uint16_t shifted_val; 
+    shifted_val = raw_val >> 6;
+	if ((shifted_val & (0b1 << 9)) == 0) {
+		// Value is positive: nothing to do.
+		res = shifted_val;
+	}
+	else {
+		// Value is negative.
+		unsigned char bit_idx = 0;
+		unsigned int not_value = 0;
+		for (bit_idx=0 ; bit_idx<=9 ; bit_idx++) {
+			if ((shifted_val & (0b1 << bit_idx)) == 0) {
+				not_value |= (0b1 << bit_idx);
+			}
+		}
+		unsigned int absolute_value = not_value + 1;
+		res = (-1) * absolute_value;
+	}
     
     return res;
 }
@@ -318,6 +338,8 @@ float convert_to_g(uint16_t raw_val, uint8_t sensor_scale)
 {
     float res;
     // TODO Convert raw sensor data to g-force acceleration value
+    res = convert_to_count(raw_val);
+    res /= (512*sensor_scale);
     
     return res;
 }

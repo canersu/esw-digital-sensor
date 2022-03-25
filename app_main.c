@@ -121,6 +121,7 @@ static void mma_data_ready_loop (void *args)
     if(res != 0)debug1("Interrupt conf failed");
     
     // TODO Configure GPIO for external interrupts and enable external interrupts.
+    gpio_external_interrupt_enable();
     
     // TODO Activate sensor.
     set_sensor_active();
@@ -130,7 +131,13 @@ static void mma_data_ready_loop (void *args)
         // TODO Wait for data ready interrupt signal from MMA8653FC sensor
         osDelay(150*osKernelGetTickFreq()/1000);
         rawData = get_xyz_data();
-        info1("Status %02x, X: %04x Y: %04x Z: %04x", rawData.status, rawData.out_x, rawData.out_y, rawData.out_z);
+        // info1("Status %02x, X: %04x Y: %04x Z: %04x", rawData.status, rawData.out_x, rawData.out_y, rawData.out_z);
+        if(rawData.status == 15)
+        {
+            buf1_x[buf_index] = convert_to_count(rawData.out_x);
+            buf1_y[buf_index] = convert_to_count(rawData.out_y);
+            buf1_z[buf_index] = convert_to_count(rawData.out_z);
+        }
 
         // TODO Get raw data
         

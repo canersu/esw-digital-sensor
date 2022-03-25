@@ -121,24 +121,24 @@ int8_t configure_xyz_data (uint8_t dataRate, uint8_t range, uint8_t powerMod)
  */
 int8_t configure_interrupt (uint8_t polarity, uint8_t pinmode, uint8_t interrupt, uint8_t int_select)
 {
-    // TODO Check if sensor is in standby mode, control registers can only be modified in standby mode.
+    // Check if sensor is in standby mode, control registers can only be modified in standby mode.
     uint8_t regVal, pol_regVal, dr_regVal, is_regVal;
     regVal = read_registry(MMA8653FC_REGADDR_SYSMOD);
     if (regVal != MMA8653FC_SYSMOD_MOD_STANDBY){return -1;}
     
-    // TODO Configure interrupt pin pinmode and interrupt transition direction
+    // Configure interrupt pin pinmode and interrupt transition direction
     pol_regVal = read_registry(MMA8653FC_REGADDR_CTRL_REG3);
     pol_regVal = (pol_regVal & ~MMA8653FC_CTRL_REG3_POLARITY_MASK) | (polarity << MMA8653FC_CTRL_REG3_POLARITY_SHIFT);
     pol_regVal = (pol_regVal & ~MMA8653FC_CTRL_REG3_PINMODE_MASK) | (pinmode << MMA8653FC_CTRL_REG3_PINMODE_SHIFT);
     write_registry(MMA8653FC_REGADDR_CTRL_REG3, pol_regVal);
 
-    // TODO Enable data ready interrupt
+    // Enable data ready interrupt
     dr_regVal = read_registry(MMA8653FC_REGADDR_CTRL_REG4);
     dr_regVal = (dr_regVal & ~MMA8653FC_CTRL_REG4_DRDY_INT_MASK) | (interrupt << MMA8653FC_CTRL_REG4_DRDY_INT_SHIFT);
     write_registry(MMA8653FC_REGADDR_CTRL_REG4, dr_regVal);
 
 
-    // TODO Route data ready interrupt to sensor INT1 output pin (connected to port PA1 on the TTTW uC)
+    // Route data ready interrupt to sensor INT1 output pin (connected to port PA1 on the TTTW uC)
     is_regVal = read_registry(MMA8653FC_REGADDR_CTRL_REG5);
     is_regVal = (is_regVal & ~MMA8653FC_CTRL_REG5_DRDY_INTSEL_MASK) | (int_select << MMA8653FC_CTRL_REG5_DRDY_INTSEL_SHIFT);
     write_registry(MMA8653FC_REGADDR_CTRL_REG5, is_regVal);
@@ -263,13 +263,13 @@ static void read_multiple_registries(uint8_t startRegAddr, uint8_t *rxBuf, uint1
 int16_t convert_to_count(uint16_t raw_val)
 {
     signed int res;
-    // TODO Convert raw sensor data to ADC readout (count) value
-	// signed int result = 0;
-	// Check sign bit.
-    uint16_t shifted_val; 
+    // Convert raw sensor data to ADC readout (count) value
+    uint16_t shifted_val;
+    // 10 bit sensor data shift operation
     shifted_val = raw_val >> 6;
+    // Check sign bit
 	if ((shifted_val & (0b1 << 9)) == 0) {
-		// Value is positive: nothing to do.
+		// Return if value is positive
 		res = shifted_val;
 	}
 	else {
@@ -302,9 +302,10 @@ int16_t convert_to_count(uint16_t raw_val)
  */
 float convert_to_g(uint16_t raw_val, uint8_t sensor_scale)
 {
+    // Convert raw sensor data to g-force acceleration value
     float res;
-    // TODO Convert raw sensor data to g-force acceleration value
     uint8_t reg;
+
     reg = read_registry(MMA8653FC_REGADDR_XYZ_DATA_CFG);
     reg = (reg & ~MMA8653FC_XYZ_DATA_CFG_RANGE_MASK);
 
